@@ -8,26 +8,10 @@
     <link rel="apple-touch-icon" href="icon.png">
     
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            padding: 20px; 
-            background-color: #f0f2f5; 
-            margin: 0;
-        }
-        .card { 
-            background: white; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
-            margin-bottom: 20px; 
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
         h2 { color: #333; margin-top: 0; font-size: 1.2em; border-bottom: 2px solid #eee; padding-bottom: 10px;}
-        .row { 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 12px 0; 
-            border-bottom: 1px dashed #e0e0e0; 
-        }
+        .row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #e0e0e0; }
         .row:last-child { border-bottom: none; }
         .label { color: #444; font-weight: 500;}
         .value { font-weight: bold; color: #000; font-size: 1.1em;}
@@ -44,14 +28,12 @@
 
     <div class="card">
         <h2>Thai (พี่รุ่ง)</h2>
-        <div id="thaiContainer">
-            </div>
+        <div id="thaiContainer"></div>
     </div>
 
     <div class="card">
         <h2>Eng (พี่ขวัญ)</h2>
-        <div id="engContainer">
-            </div>
+        <div id="engContainer"></div>
     </div>
 
     <div class="card total-card">
@@ -63,8 +45,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // === အောက်ကနေရာမှာ မင်းရဲ့ Firebase Config အစစ်ကို ပြန်ထည့်ပေးရန် မမေ့ပါနဲ့ ===
-        const firebaseConfig = {
+        // === ဒီနေရာမှာ မင်းရဲ့ Firebase Config အစစ်ကို ပြန်ထည့်ပေးရန် မမေ့ပါနဲ့ ===
+const firebaseConfig = {
   apiKey: "AIzaSyBSvePOQ538DEV7T7kg4WpplMX7aFTY7eU",
   authDomain: "shrimptracker-82dab.firebaseapp.com",
   databaseURL: "https://shrimptracker-82dab-default-rtdb.firebaseio.com",
@@ -79,32 +61,52 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // ပေါ်စေချင်တဲ့ အစီအစဉ်အတိုင်း သတ်မှတ်ထားခြင်း (Thai)
+        const thaiOrder = [
+            "กุ้งตัวใหญ่ (x)",
+            "กุ้งตัวใหญ่ (xxx)",
+            "กุ้งตัวเล็ก",
+            "กุ้งตัวเล็ก(รุ่งก)",
+            "กุ้งตัวเล็ก (ไม่มีป้าย)",
+            "กุ้งเขียว",
+            "กุ้งนิ่ม"
+        ];
+
+        // ပေါ်စေချင်တဲ့ အစီအစဉ်အတိုင်း သတ်မှတ်ထားခြင်း (Eng)
+        const engOrder = [
+            "กุ้งตัวใหญ่ (x)",
+            "กุ้งตัวเล็ก",
+            "กุ้งเขียว",
+            "กุ้งนิ่ม"
+        ];
+
         const latestRecordRef = db.ref('shrimp_records').orderByChild('timestamp').limitToLast(1);
 
         latestRecordRef.on('value', (snapshot) => {
             snapshot.forEach((childSnapshot) => {
                 const data = childSnapshot.val();
 
-                // HTML ထဲကို Data တွေ အလိုအလျောက် ထည့်ပေးမယ့် Function
-                function generateRows(sectionData) {
+                // အစီအစဉ်အတိုင်း Data ထုတ်ပေးမယ့် Function အသစ်
+                function generateOrderedRows(sectionData, orderArray) {
                     if (!sectionData || Object.keys(sectionData).length === 0) {
                         return '<div class="no-data">ဒီနေ့အတွက် စာရင်းမရှိပါ (ไม่มีข้อมูล)</div>';
                     }
                     let html = '';
-                    for (const [key, value] of Object.entries(sectionData)) {
-                        html += `<div class="row"><span class="label">${key}:</span> <span class="value">${value}</span></div>`;
-                    }
+                    // သတ်မှတ်ထားတဲ့ Array အစီအစဉ်အတိုင်း တစ်ခုချင်းစီ ရှာပြီးထုတ်မယ်
+                    orderArray.forEach(key => {
+                        if (sectionData[key] !== undefined) {
+                            html += `<div class="row"><span class="label">${key}:</span> <span class="value">${sectionData[key]}</span></div>`;
+                        }
+                    });
                     return html;
                 }
 
-                // Thai နဲ့ Eng နေရာတွေမှာ Auto ရေးထည့်မယ်
-                document.getElementById('thaiContainer').innerHTML = generateRows(data.thai_rung);
-                document.getElementById('engContainer').innerHTML = generateRows(data.eng_khwan);
+                // Thai နဲ့ Eng အတွက် အစီအစဉ်တကျ ထည့်သွင်းမယ်
+                document.getElementById('thaiContainer').innerHTML = generateOrderedRows(data.thai_rung, thaiOrder);
+                document.getElementById('engContainer').innerHTML = generateOrderedRows(data.eng_khwan, engOrder);
                 
-                // Total Box ပြမယ်
                 document.getElementById('totalBoxes').innerText = data.total_all_boxes || 0;
 
-                // အချိန်ပြောင်းမယ်
                 const date = new Date(data.timestamp);
                 document.getElementById('lastUpdated').innerText = "Last Updated: " + date.toLocaleString();
             });
@@ -112,4 +114,3 @@
     </script>
 </body>
 </html>
-
