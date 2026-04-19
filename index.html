@@ -8,31 +8,59 @@
     <link rel="apple-touch-icon" href="icon.png">
     
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; margin: 0; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2 { color: #333; margin-top: 0; font-size: 1.2em; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; background-color: #f4f7f6; margin: 0; }
+        .header-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        
+        /* နေ့စွဲရွေးတဲ့ အကွက် ဒီဇိုင်း */
+        select { 
+            padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; 
+            width: 100%; max-width: 300px; margin-bottom: 15px; background: white; font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); outline: none;
+        }
+
+        /* Status Badge ဒီဇိုင်း */
+        .status-badge { 
+            padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; 
+            text-align: center; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-draft { background-color: #FFF3E0; color: #E65100; border: 1px solid #FFCC80; }
+        .status-verified { background-color: #E8F5E9; color: #2E7D32; border: 1px solid #A5D6A7; }
+
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { margin-top: 0; font-size: 1.3em; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;}
+        .thai-title { color: #2E7D32; }
+        .eng-title { color: #1976D2; }
+        
         .row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #e0e0e0; }
         .row:last-child { border-bottom: none; }
-        .label { color: #444; font-weight: 500;}
-        .value { font-weight: bold; color: #000; font-size: 1.1em;}
-        .no-data { text-align: center; color: #999; padding: 10px 0; font-style: italic; }
-        .total-card { background: #4CAF50; color: white; }
-        .total-card h2 { color: white; border-bottom-color: rgba(255,255,255,0.3); }
-        .total-val { font-size: 2.5em; font-weight: bold; text-align: center; padding: 10px 0; }
-        .time { text-align: center; color: #888; font-size: 0.85em; margin-bottom: 20px; }
+        .label { color: #555; font-weight: 500;}
+        .value { font-weight: bold; color: #111; font-size: 1.1em;}
+        .no-data { text-align: center; color: #999; padding: 15px 0; font-style: italic; }
+        
+        .total-card { background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; text-align: center; }
+        .total-card h2 { color: white; border-bottom: 1px solid rgba(255,255,255,0.3); }
+        .total-val { font-size: 3em; font-weight: bold; padding: 10px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);}
+        
+        .footer-time { text-align: center; color: #aaa; font-size: 0.8em; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="time" id="lastUpdated">Checking for latest data...</div>
+    <div class="header-container">
+        <select id="dateSelect" onchange="renderDataForSelectedDate()">
+            <option value="">กำลังโหลดข้อมูล... (Loading)</option>
+        </select>
+        
+        <div id="statusBadge" class="status-badge" style="display:none;"></div>
+    </div>
 
     <div class="card">
-        <h2>Thai (พี่รุ่ง)</h2>
+        <h2 class="thai-title">Thai (พี่รุ่ง)</h2>
         <div id="thaiContainer"></div>
     </div>
 
     <div class="card">
-        <h2>Eng (พี่ขวัญ)</h2>
+        <h2 class="eng-title">Eng (พี่ขวัญ)</h2>
         <div id="engContainer"></div>
     </div>
 
@@ -41,12 +69,14 @@
         <div class="total-val" id="totalBoxes">0</div>
     </div>
 
+    <div class="footer-time" id="lastUpdated"></div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // === ဒီနေရာမှာ မင်းရဲ့ Firebase Config အစစ်ကို ပြန်ထည့်ပေးရန် မမေ့ပါနဲ့ ===
-const firebaseConfig = {
+        // === မင်းရဲ့ Firebase Config အစစ်ကို ပြန်ထည့်ပါ ===
+        const firebaseConfig = {
   apiKey: "AIzaSyBSvePOQ538DEV7T7kg4WpplMX7aFTY7eU",
   authDomain: "shrimptracker-82dab.firebaseapp.com",
   databaseURL: "https://shrimptracker-82dab-default-rtdb.firebaseio.com",
@@ -56,61 +86,105 @@ const firebaseConfig = {
   appId: "1:87193695017:web:11c178683e4c52ddc67d38",
   measurementId: "G-18739WHF5Z"
 };
-        // =======================================================================
+        // =================================================
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // ပေါ်စေချင်တဲ့ အစီအစဉ်အတိုင်း သတ်မှတ်ထားခြင်း (Thai)
         const thaiOrder = [
-            "กุ้งตัวใหญ่ (x)",
-            "กุ้งตัวใหญ่ (xxx)",
-            "กุ้งตัวเล็ก",
-            "กุ้งตัวเล็ก(รุ่งก)",
-            "กุ้งตัวเล็ก (ไม่มีป้าย)",
-            "กุ้งเขียว",
-            "กุ้งนิ่ม"
+            "กุ้งตัวใหญ่ (x)", "กุ้งตัวใหญ่ (xxx)", "กุ้งตัวเล็ก", "กุ้งตัวเล็ก(รุ่งก)",
+            "กุ้งตัวเล็ก (ไม่มีป้าย)", "กุ้งเขียว", "กุ้งนิ่ม"
         ];
-
-        // ပေါ်စေချင်တဲ့ အစီအစဉ်အတိုင်း သတ်မှတ်ထားခြင်း (Eng)
         const engOrder = [
-            "กุ้งตัวใหญ่ (x)",
-            "กุ้งตัวเล็ก",
-            "กุ้งเขียว",
-            "กุ้งนิ่ม"
+            "กุ้งตัวใหญ่ (x)", "กุ้งตัวเล็ก", "กุ้งเขียว", "กุ้งนิ่ม"
         ];
 
-        const latestRecordRef = db.ref('shrimp_records').orderByChild('timestamp').limitToLast(1);
+        let allRecords = {}; // Data အားလုံးကို သိမ်းထားမယ့်နေရာ
 
-        latestRecordRef.on('value', (snapshot) => {
-            snapshot.forEach((childSnapshot) => {
-                const data = childSnapshot.val();
-
-                // အစီအစဉ်အတိုင်း Data ထုတ်ပေးမယ့် Function အသစ်
-                function generateOrderedRows(sectionData, orderArray) {
-                    if (!sectionData || Object.keys(sectionData).length === 0) {
-                        return '<div class="no-data">ဒီနေ့အတွက် စာရင်းမရှိပါ (ไม่มีข้อมูล)</div>';
-                    }
-                    let html = '';
-                    // သတ်မှတ်ထားတဲ့ Array အစီအစဉ်အတိုင်း တစ်ခုချင်းစီ ရှာပြီးထုတ်မယ်
-                    orderArray.forEach(key => {
-                        if (sectionData[key] !== undefined) {
-                            html += `<div class="row"><span class="label">${key}:</span> <span class="value">${sectionData[key]}</span></div>`;
-                        }
-                    });
-                    return html;
-                }
-
-                // Thai နဲ့ Eng အတွက် အစီအစဉ်တကျ ထည့်သွင်းမယ်
-                document.getElementById('thaiContainer').innerHTML = generateOrderedRows(data.thai_rung, thaiOrder);
-                document.getElementById('engContainer').innerHTML = generateOrderedRows(data.eng_khwan, engOrder);
-                
-                document.getElementById('totalBoxes').innerText = data.total_all_boxes || 0;
-
-                const date = new Date(data.timestamp);
-                document.getElementById('lastUpdated').innerText = "Last Updated: " + date.toLocaleString();
-            });
+        // နောက်ဆုံး ၁၅ ခု (၁၅ ရက်စာ) ကိုပဲ ဆွဲယူမယ်
+        db.ref('shrimp_records').limitToLast(15).on('value', (snapshot) => {
+            allRecords = snapshot.val() || {};
+            updateDateDropdown();
         });
+
+        function updateDateDropdown() {
+            const selectElement = document.getElementById('dateSelect');
+            selectElement.innerHTML = ''; // အဟောင်းတွေဖျက်
+            
+            // ရက်စွဲတွေကို နောက်ဆုံးရက်ကနေ အစောဆုံးရက် ပြောင်းပြန်စီမယ်
+            const dates = Object.keys(allRecords).reverse(); 
+
+            if (dates.length === 0) {
+                selectElement.innerHTML = '<option value="">ไม่มีข้อมูล (No Data)</option>';
+                clearUI();
+                return;
+            }
+
+            dates.forEach(dateKey => {
+                const option = document.createElement('option');
+                option.value = dateKey;
+                // နာမည်ဟောင်းတွေ (Random ID) ကိုကျော်ပြီး နေ့စွဲပုံစံ (2026-04-19) တွေကိုပဲ လှပအောင်ပြမယ်
+                option.text = "วันที่ (Date) : " + dateKey;
+                selectElement.appendChild(option);
+            });
+
+            // အသစ်ဆုံးရက်ကို အလိုအလျောက် ရွေးထားပေးမယ်
+            selectElement.value = dates[0];
+            renderDataForSelectedDate();
+        }
+
+        function renderDataForSelectedDate() {
+            const selectedDate = document.getElementById('dateSelect').value;
+            if (!selectedDate || !allRecords[selectedDate]) {
+                clearUI();
+                return;
+            }
+
+            const data = allRecords[selectedDate];
+
+            // 1. Status Badge ပြောင်းခြင်း
+            const badge = document.getElementById('statusBadge');
+            badge.style.display = 'inline-block';
+            if (data.status === 'draft') {
+                badge.className = 'status-badge status-draft';
+                badge.innerText = '⚠️ ฉบับร่าง (ยังไม่ยืนยัน) - Draft';
+            } else if (data.status === 'verified') {
+                badge.className = 'status-badge status-verified';
+                badge.innerText = '✅ ตรวจสอบและยืนยันแล้ว - Verified';
+            } else {
+                badge.style.display = 'none'; // အဟောင်းတွေဆို မပြဘူး
+            }
+
+            // 2. Data တွေ ဖြည့်ခြင်း
+            document.getElementById('thaiContainer').innerHTML = generateOrderedRows(data.thai_rung, thaiOrder);
+            document.getElementById('engContainer').innerHTML = generateOrderedRows(data.eng_khwan, engOrder);
+            document.getElementById('totalBoxes').innerText = data.total_all_boxes || 0;
+
+            // 3. အချိန်ပြခြင်း
+            const dateObj = new Date(data.timestamp);
+            document.getElementById('lastUpdated').innerText = "อัปเดตล่าสุด (Last Updated): " + dateObj.toLocaleString();
+        }
+
+        function generateOrderedRows(sectionData, orderArray) {
+            if (!sectionData || Object.keys(sectionData).length === 0) {
+                return '<div class="no-data">ไม่มีข้อมูล (No data for this date)</div>';
+            }
+            let html = '';
+            orderArray.forEach(key => {
+                if (sectionData[key] !== undefined) {
+                    html += `<div class="row"><span class="label">${key}:</span> <span class="value">${sectionData[key]}</span></div>`;
+                }
+            });
+            return html;
+        }
+
+        function clearUI() {
+            document.getElementById('statusBadge').style.display = 'none';
+            document.getElementById('thaiContainer').innerHTML = '<div class="no-data">ไม่มีข้อมูล</div>';
+            document.getElementById('engContainer').innerHTML = '<div class="no-data">ไม่มีข้อมูล</div>';
+            document.getElementById('totalBoxes').innerText = '0';
+            document.getElementById('lastUpdated').innerText = '';
+        }
     </script>
 </body>
 </html>
