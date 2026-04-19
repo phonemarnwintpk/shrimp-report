@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shrimp Report</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 20px; 
+            background-color: #f0f2f5; 
+            margin: 0;
+        }
+        .card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+            margin-bottom: 20px; 
+        }
+        h2 { color: #333; margin-top: 0; font-size: 1.2em; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+        .row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 0; 
+            border-bottom: 1px solid #f0f0f0; 
+        }
+        .row:last-child { border-bottom: none; }
+        .label { color: #555; }
+        .value { font-weight: bold; color: #000; font-size: 1.1em;}
+        .total-card { background: #4CAF50; color: white; }
+        .total-card h2 { color: white; border-bottom-color: rgba(255,255,255,0.3); }
+        .total-val { font-size: 2em; font-weight: bold; text-align: center; padding: 10px 0; }
+        .time { text-align: center; color: #888; font-size: 0.85em; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="time" id="lastUpdated">Checking for latest data...</div>
+
+    <div class="card">
+        <h2>Thai (พี่รุ่ง)</h2>
+        <div class="row"><span class="label">ပုစွန်အကြီး (กุ้งตัวใหญ่):</span> <span class="value" id="tBig">0</span></div>
+        <div class="row"><span class="label">ပုစွန်အသေး (กุ้งตัวเล็ก):</span> <span class="value" id="tSmall">0</span></div>
+        <div class="row"><span class="label">အစိမ်း (กุ้งเขียว):</span> <span class="value" id="tGreen">0</span></div>
+    </div>
+
+    <div class="card">
+        <h2>Eng (พี่ขวัญ)</h2>
+        <div class="row"><span class="label">ပုစွန်အကြီး (กุ้งตัวใหญ่):</span> <span class="value" id="eBig">0</span></div>
+        <div class="row"><span class="label">ပုစွန်အသေး (กุ้งตัวเล็ก):</span> <span class="value" id="eSmall">0</span></div>
+    </div>
+
+    <div class="card total-card">
+        <h2>Total All Boxes (รวมทั้งหมด)</h2>
+        <div class="total-val" id="totalBoxes">0</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // === အဆင့် (၃) - အောက်က နေရာမှာ မင်းစောစောက Copy ကူးလာတဲ့ Config ကို အစားထိုးထည့်ပါ ===
+        const firebaseConfig = {
+  apiKey: "AIzaSyBSvePOQ538DEV7T7kg4WpplMX7aFTY7eU",
+  authDomain: "shrimptracker-82dab.firebaseapp.com",
+  databaseURL: "https://shrimptracker-82dab-default-rtdb.firebaseio.com",
+  projectId: "shrimptracker-82dab",
+  storageBucket: "shrimptracker-82dab.firebasestorage.app",
+  messagingSenderId: "87193695017",
+  appId: "1:87193695017:web:11c178683e4c52ddc67d38",
+  measurementId: "G-18739WHF5Z"
+};
+        // =======================================================================
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Database ထဲက နောက်ဆုံးဝင်ထားတဲ့ Data ၁ ခုကိုပဲ အချိန်နဲ့တပြေးညီ လှမ်းဆွဲမယ်
+        const latestRecordRef = db.ref('shrimp_records').orderByChild('timestamp').limitToLast(1);
+
+        latestRecordRef.on('value', (snapshot) => {
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+
+                // UI ထဲက စာတွေကို Update လုပ်မယ်
+                document.getElementById('tBig').innerText = data.thai_rung?.big || 0;
+                document.getElementById('tSmall').innerText = data.thai_rung?.small || 0;
+                document.getElementById('tGreen').innerText = data.thai_rung?.green || 0;
+
+                document.getElementById('eBig').innerText = data.eng_khwan?.big || 0;
+                document.getElementById('eSmall').innerText = data.eng_khwan?.small || 0;
+
+                document.getElementById('totalBoxes').innerText = data.total_all_boxes || 0;
+
+                // အချိန်ပြောင်းမယ်
+                const date = new Date(data.timestamp);
+                document.getElementById('lastUpdated').innerText = "Last Updated: " + date.toLocaleString();
+            });
+        });
+    </script>
+</body>
+</html>
+
