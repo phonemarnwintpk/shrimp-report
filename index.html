@@ -11,17 +11,15 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; background-color: #f4f7f6; margin: 0; }
         .header-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
         
-        /* နေ့စွဲရွေးတဲ့ အကွက် ဒီဇိုင်း */
         select { 
             padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; 
             width: 100%; max-width: 300px; margin-bottom: 15px; background: white; font-weight: bold;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); outline: none;
         }
 
-        /* Status Badge ဒီဇိုင်း */
         .status-badge { 
             padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; 
-            text-align: center; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 10px;
         }
         .status-draft { background-color: #FFF3E0; color: #E65100; border: 1px solid #FFCC80; }
         .status-verified { background-color: #E8F5E9; color: #2E7D32; border: 1px solid #A5D6A7; }
@@ -37,11 +35,18 @@
         .value { font-weight: bold; color: #111; font-size: 1.1em;}
         .no-data { text-align: center; color: #999; padding: 15px 0; font-style: italic; }
         
+        /* Section Total Design */
+        .section-total { margin-top: 15px; padding-top: 10px; border-top: 2px solid #eee; text-align: right; font-weight: bold; color: #333; font-size: 1.1em; }
+        
         .total-card { background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; text-align: center; }
         .total-card h2 { color: white; border-bottom: 1px solid rgba(255,255,255,0.3); }
         .total-val { font-size: 3em; font-weight: bold; padding: 10px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);}
         
-        .footer-time { text-align: center; color: #aaa; font-size: 0.8em; margin-top: 20px; }
+        /* Copy Button Design */
+        .copy-btn { background: #2196F3; color: white; border: none; padding: 15px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.1em; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;}
+        .copy-btn:active { background: #1976D2; transform: translateY(2px); }
+
+        .footer-time { text-align: center; color: #aaa; font-size: 0.8em; margin-top: 10px; margin-bottom: 30px;}
     </style>
 </head>
 <body>
@@ -50,24 +55,27 @@
         <select id="dateSelect" onchange="renderDataForSelectedDate()">
             <option value="">กำลังโหลดข้อมูล... (Loading)</option>
         </select>
-        
         <div id="statusBadge" class="status-badge" style="display:none;"></div>
     </div>
 
     <div class="card">
         <h2 class="thai-title">Thai (พี่รุ่ง)</h2>
         <div id="thaiContainer"></div>
+        <div class="section-total" id="thaiTotal">รวม Thai: 0 กล่อง</div>
     </div>
 
     <div class="card">
         <h2 class="eng-title">Eng (พี่ขวัญ)</h2>
         <div id="engContainer"></div>
+        <div class="section-total" id="engTotal">รวม Eng: 0 กล่อง</div>
     </div>
 
     <div class="card total-card">
         <h2>Total All Boxes (รวมทั้งหมด)</h2>
         <div class="total-val" id="totalBoxes">0</div>
     </div>
+
+    <button class="copy-btn" onclick="copyDataToClipboard()">📋 คัดลอกข้อมูล (Copy Text)</button>
 
     <div class="footer-time" id="lastUpdated"></div>
 
@@ -91,17 +99,11 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const thaiOrder = [
-            "กุ้งตัวใหญ่ (x)", "กุ้งตัวใหญ่ (xxx)", "กุ้งตัวเล็ก", "กุ้งตัวเล็ก(รุ่งก)",
-            "กุ้งตัวเล็ก (ไม่มีป้าย)", "กุ้งเขียว", "กุ้งนิ่ม"
-        ];
-        const engOrder = [
-            "กุ้งตัวใหญ่ (x)", "กุ้งตัวเล็ก", "กุ้งเขียว", "กุ้งนิ่ม"
-        ];
+        const thaiOrder = ["กุ้งตัวใหญ่ (x)", "กุ้งตัวใหญ่ (xxx)", "กุ้งตัวเล็ก", "กุ้งตัวเล็ก(รุ่งก)", "กุ้งตัวเล็ก (ไม่มีป้าย)", "กุ้งเขียว", "กุ้งนิ่ม"];
+        const engOrder = ["กุ้งตัวใหญ่ (x)", "กุ้งตัวเล็ก", "กุ้งเขียว", "กุ้งนิ่ม"];
 
-        let allRecords = {}; // Data အားလုံးကို သိမ်းထားမယ့်နေရာ
+        let allRecords = {};
 
-        // နောက်ဆုံး ၁၅ ခု (၁၅ ရက်စာ) ကိုပဲ ဆွဲယူမယ်
         db.ref('shrimp_records').limitToLast(15).on('value', (snapshot) => {
             allRecords = snapshot.val() || {};
             updateDateDropdown();
@@ -109,9 +111,7 @@
 
         function updateDateDropdown() {
             const selectElement = document.getElementById('dateSelect');
-            selectElement.innerHTML = ''; // အဟောင်းတွေဖျက်
-            
-            // ရက်စွဲတွေကို နောက်ဆုံးရက်ကနေ အစောဆုံးရက် ပြောင်းပြန်စီမယ်
+            selectElement.innerHTML = ''; 
             const dates = Object.keys(allRecords).reverse(); 
 
             if (dates.length === 0) {
@@ -123,14 +123,28 @@
             dates.forEach(dateKey => {
                 const option = document.createElement('option');
                 option.value = dateKey;
-                // နာမည်ဟောင်းတွေ (Random ID) ကိုကျော်ပြီး နေ့စွဲပုံစံ (2026-04-19) တွေကိုပဲ လှပအောင်ပြမယ်
                 option.text = "วันที่ (Date) : " + dateKey;
                 selectElement.appendChild(option);
             });
 
-            // အသစ်ဆုံးရက်ကို အလိုအလျောက် ရွေးထားပေးမယ်
             selectElement.value = dates[0];
             renderDataForSelectedDate();
+        }
+
+        // စာသားထဲကနေ ဖာအရေအတွက်ကို ဆွဲထုတ်ပြီး ပေါင်းပေးမယ့် Function အသစ်
+        function calculateSectionTotal(sectionData) {
+            let total = 0;
+            if (sectionData) {
+                for (let key in sectionData) {
+                    let valStr = String(sectionData[key]);
+                    // "32 (6.5) = 316.5" ထဲက ရှေ့ဆုံးက "32" ကိုပဲ ယူပြီးပေါင်းမယ်
+                    let boxes = parseInt(valStr.split(' ')[0]);
+                    if (!isNaN(boxes)) {
+                        total += boxes;
+                    }
+                }
+            }
+            return total;
         }
 
         function renderDataForSelectedDate() {
@@ -142,7 +156,7 @@
 
             const data = allRecords[selectedDate];
 
-            // 1. Status Badge ပြောင်းခြင်း
+            // Status Badge
             const badge = document.getElementById('statusBadge');
             badge.style.display = 'inline-block';
             if (data.status === 'draft') {
@@ -152,22 +166,26 @@
                 badge.className = 'status-badge status-verified';
                 badge.innerText = '✅ ตรวจสอบและยืนยันแล้ว - Verified';
             } else {
-                badge.style.display = 'none'; // အဟောင်းတွေဆို မပြဘူး
+                badge.style.display = 'none'; 
             }
 
-            // 2. Data တွေ ဖြည့်ခြင်း
+            // Data ဖြည့်ခြင်း
             document.getElementById('thaiContainer').innerHTML = generateOrderedRows(data.thai_rung, thaiOrder);
             document.getElementById('engContainer').innerHTML = generateOrderedRows(data.eng_khwan, engOrder);
+            
+            // Total Thai & Eng တွက်ချက်ပြီး ပြခြင်း
+            document.getElementById('thaiTotal').innerText = "รวม Thai: " + calculateSectionTotal(data.thai_rung) + " กล่อง";
+            document.getElementById('engTotal').innerText = "รวม Eng: " + calculateSectionTotal(data.eng_khwan) + " กล่อง";
+            
             document.getElementById('totalBoxes').innerText = data.total_all_boxes || 0;
 
-            // 3. အချိန်ပြခြင်း
             const dateObj = new Date(data.timestamp);
-            document.getElementById('lastUpdated').innerText = "อัปเดตล่าสุด (Last Updated): " + dateObj.toLocaleString();
+            document.getElementById('lastUpdated').innerText = "อัปเดตล่าสุด: " + dateObj.toLocaleString();
         }
 
         function generateOrderedRows(sectionData, orderArray) {
             if (!sectionData || Object.keys(sectionData).length === 0) {
-                return '<div class="no-data">ไม่มีข้อมูล (No data for this date)</div>';
+                return '<div class="no-data">ไม่มีข้อมูล</div>';
             }
             let html = '';
             orderArray.forEach(key => {
@@ -182,8 +200,55 @@
             document.getElementById('statusBadge').style.display = 'none';
             document.getElementById('thaiContainer').innerHTML = '<div class="no-data">ไม่มีข้อมูล</div>';
             document.getElementById('engContainer').innerHTML = '<div class="no-data">ไม่มีข้อมูล</div>';
+            document.getElementById('thaiTotal').innerText = "รวม Thai: 0 กล่อง";
+            document.getElementById('engTotal').innerText = "รวม Eng: 0 กล่อง";
             document.getElementById('totalBoxes').innerText = '0';
             document.getElementById('lastUpdated').innerText = '';
+        }
+
+        // Messenger ပို့ရန် Copy ကူးမည့် Function အသစ်
+        function copyDataToClipboard() {
+            const dateStr = document.getElementById('dateSelect').value;
+            if (!dateStr || !allRecords[dateStr]) {
+                alert("ไม่มีข้อมูลให้คัดลอก (Data မရှိပါ)");
+                return;
+            }
+            
+            const data = allRecords[dateStr];
+            let text = "📅 วันที่: " + dateStr + "\n";
+            text += (data.status === 'verified' ? "✅ ตรวจสอบแล้ว\n\n" : "⚠️ ฉบับร่าง (Draft)\n\n");
+
+            text += "🟢 Thai (พี่รุ่ง)\n";
+            let thaiTotal = 0;
+            if (data.thai_rung) {
+                thaiOrder.forEach(key => {
+                    if (data.thai_rung[key] !== undefined) {
+                        text += key + " - " + data.thai_rung[key] + "\n";
+                    }
+                });
+                thaiTotal = calculateSectionTotal(data.thai_rung);
+            }
+            text += "รวม Thai: " + thaiTotal + " กล่อง\n\n";
+
+            text += "🔵 Eng (พี่ขวัญ)\n";
+            let engTotal = 0;
+            if (data.eng_khwan) {
+                engOrder.forEach(key => {
+                    if (data.eng_khwan[key] !== undefined) {
+                        text += key + " - " + data.eng_khwan[key] + "\n";
+                    }
+                });
+                engTotal = calculateSectionTotal(data.eng_khwan);
+            }
+            text += "รวม Eng: " + engTotal + " กล่อง\n\n";
+
+            text += "📦 รวมทั้งหมด: " + (data.total_all_boxes || 0) + " กล่อง\n";
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert("คัดลอกสำเร็จ! (Copy မှတ်သားပြီးပါပြီ။ Messenger တွင် Paste ချနိုင်ပါပြီ။)");
+            }).catch(err => {
+                alert("Copy ယူရာတွင် အမှားအယွင်းရှိပါသည်။");
+            });
         }
     </script>
 </body>
